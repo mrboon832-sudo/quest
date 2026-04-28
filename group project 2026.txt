@@ -1,0 +1,84 @@
+﻿Faculty of Information & Communication Technology 
+DATABASE SYSTEMS BIDB2210 Department : Faculty of Information & Communication Technology Progam/class Name : BSc in Business Information Technology 
+ : BSc in Information Technology  
+ : BSc in Software Engineering with Multimedia 
+Course Name : Database Systems Semester : 2 
+Commence Date : 18th February 2026 Deadline Date : 8th May 2026 before 1pm Unit Controller : Mr Makheka and Mr, Takalimane 
+Group  Project 25%
+E-mail : assginluct@gmail.com and mpho.takalimane@limkokwing.ac.ls Marks : 100 Marks 
+Datamak Technologies require you to design and develop a Fraud Detection and Risk  Monitoring System using the Neo4j database (graph database). The system will model  relationships between entities such as Customers, Transactions, Devices, Locations, and  Accounts to detect suspicious patterns and high-risk behaviour. Students must design a graph  schema with appropriate nodes, relationships, and properties, and implement Cypher queries to  analyse transaction flows, identify unusual connections, and compute risk levels. The system  should automatically flag high-risk transactions based on relationship patterns such as multiple  linked accounts, shared devices, high-frequency transfers, or connections to previously flagged  entities. 
+This project will enable you to apply graph database concepts including graph modelling,  relationship traversal, pattern matching, and query optimization using Cypher. Groups must  submit a documented graph design (ER-to-graph mapping), sample dataset, implemented  queries, and a functional prototype demonstrating fraud detection scenarios. 
+You must also write a report, and it must be in this format, “Abstract, Introduction, “Body”,  Conclusion, and References”. The report must include more than ten (10) academic  references published within the last five (5) years, sourced strictly from peer-reviewed  journals and academic books. References from blogs, non-academic websites, or  informal online sources are not permitted and IEEE referencing format must be followed. 
+Page 1 of 2 
+OBJECTIVE 
+∙ The objective of this Group Assignment is for students to provide a realistic experience  in the conceptual design, logical design, implementation, operation, and maintenance of  a NoSQL database and associated applications. 
+EXPECTED OUTCOME 
+∙ Students are expected to understand the use of NoSQL in database design. 
+SUBMISSION INFORMATION 
+∙ Student who submits this Assignment later than the deadline date stated above will have  marks penalized. (10% of the total mark everyday) 
+∙ Print out the Assignment by using Arial Narrow font style and size of 12 by using  Microsoft Word, and report must be 10 to 20 pages using spiral binding.  ∙ You must submit the work with an assignment cover page stapled together as  submission. 
+∙ Show responsibilities of each member. And every group must have 5 to 7  members per group 
+∙ PLEASE UPLOAD YOUR REPORT ON TURNITIN BEFORE PRINTING AND  SIMILARITY MUST BE LESS THAN 15% 
+SPECIFIC INFORMATION 
+∙ PLEASE submit a hardcopy of your assignment being a report of your system with a  cover page and the report should be in this layout: abstract, introduction, “body”  and conclusion, and it should be 10 to 20 pages excluding reference page. 
+∙ You must submit a softcopy through Google Classroom of your Report and System  ∙ This Assignment is a group work, and it contributes 25% to your overall semester  assessment. 
+MARKING CRITERIA 
+The following is the marks deduction: 
+∙ Late submission = 10% per day of your total marks irrespective of reasons and excuses ∙ Not following question requirements = 0 % is awarded immediately 
+∙ Plagiarism = 0% is awarded immediately. 
+∙ No Reference for the report= 0% is awarded immediately 
+∙ Let others copy your work = 0% is awarded immediately.
+Page 2 of 3 
+MARKS ALLOCATION
+
+
+	MARKS
+	Report 
+	30%
+	1. Abstract 
+	5
+	2. Introduction 
+	5
+	3. Body 
+	10
+	4. Conclusion 
+	5
+	5. Layout of the report (IEEE Format) 
+	5
+	System 
+	70%
+	System Architecture & Database Design
+	
+
+	1. Neoj4 Schema Design 
+	10
+	2. Data Security & Integrity 
+	10
+	Fraud Detection & Risk Monitoring Module
+	
+
+	1. Risk Scoring & Fraud Detection Logic (Cypher Queries) 
+	10
+	2. Report Generation & Retrieval 
+	10
+	User Interface
+	
+
+	1. Responsive & Intuitive UI- Functionality 
+	10
+	2. Data Visualization – Visualization of fraud networks, Risk distribution  charts
+	10
+	Code Quality & Documentation
+	
+
+	1. Error handling 
+	5
+	2. Project Documentation – ReadMe file, setup instructions 
+	5
+	TOTAL MARKS 
+	100
+	
+
+
+
+Page 3 of 3

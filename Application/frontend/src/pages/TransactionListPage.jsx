@@ -1,64 +1,163 @@
-import React, { useState } from 'react';
-import { Table, Tag, Input, Select, Card, Space } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { Table, Tag, Input, Card, Space, Button, Spin, message, Popconfirm } from 'antd';
+import { SearchOutlined, FlagOutlined, ReloadOutlined } from '@ant-design/icons';
+import { transactionService } from '../services/api';
 
 const { Search } = Input;
 
-const dataSource = [
-  { key: '1', id: 'TXN001', fromAccount: 'ACC-4521', toAccount: 'MERCH-881', amount: 15234.50, date: '2026-04-07', risk: 'High', status: 'Flagged' },
-  { key: '2', id: 'TXN002', fromAccount: 'ACC-3312', toAccount: 'MERCH-223', amount: 2340.00, date: '2026-04-07', risk: 'Medium', status: 'Under Review' },
-  { key: '3', id: 'TXN003', fromAccount: 'ACC-7789', toAccount: 'MERCH-445', amount: 890.25, date: '2026-04-06', risk: 'Low', status: 'Cleared' },
-  { key: '4', id: 'TXN004', fromAccount: 'ACC-1122', toAccount: 'MERCH-881', amount: 45200.00, date: '2026-04-06', risk: 'High', status: 'Flagged' },
-  { key: '5', id: 'TXN005', fromAccount: 'ACC-5544', toAccount: 'MERCH-667', amount: 1250.75, date: '2026-04-05', risk: 'Low', status: 'Cleared' },
-  { key: '6', id: 'TXN006', fromAccount: 'ACC-9988', toAccount: 'MERCH-223', amount: 8750.00, date: '2026-04-05', risk: 'Medium', status: 'Under Review' },
-  { key: '7', id: 'TXN007', fromAccount: 'ACC-2233', toAccount: 'MERCH-445', amount: 32100.00, date: '2026-04-04', risk: 'High', status: 'Flagged' },
-  { key: '8', id: 'TXN008', fromAccount: 'ACC-6677', toAccount: 'MERCH-881', amount: 540.00, date: '2026-04-04', risk: 'Low', status: 'Cleared' },
-];
-
-const columns = [
-  { title: 'Transaction ID', dataIndex: 'id', key: 'id', sorter: (a, b) => a.id.localeCompare(b.id) },
-  { title: 'From Account', dataIndex: 'fromAccount', key: 'fromAccount' },
-  { title: 'To Account', dataIndex: 'toAccount', key: 'toAccount' },
-  { title: 'Amount', dataIndex: 'amount', key: 'amount', render: (val) => `$${val.toLocaleString()}`, sorter: (a, b) => a.amount - b.amount },
-  { title: 'Date', dataIndex: 'date', key: 'date', sorter: (a, b) => new Date(a.date) - new Date(b.date) },
-  {
-    title: 'Risk Level',
-    dataIndex: 'risk',
-    key: 'risk',
-    filters: [
-      { text: 'High', value: 'High' },
-      { text: 'Medium', value: 'Medium' },
-      { text: 'Low', value: 'Low' },
-    ],
-    onFilter: (value, record) => record.risk === value,
-    render: (risk) => (
-      <Tag color={risk === 'High' ? 'red' : risk === 'Medium' ? 'orange' : 'green'}>{risk}</Tag>
-    ),
-  },
-  {
-    title: 'Status',
-    dataIndex: 'status',
-    key: 'status',
-    render: (status) => (
-      <Tag color={status === 'Flagged' ? 'red' : status === 'Under Review' ? 'orange' : 'green'}>
-        {status}
-      </Tag>
-    ),
-  },
-];
-
 export default function TransactionListPage() {
   const [searchText, setSearchText] = useState('');
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [flaggingId, setFlaggingId] = useState(null);
 
-  const filteredData = dataSource.filter(
+  // Fetch transactions on component mount
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const fetchTransactions = async () => {
+    setLoading(true);
+    try {
+      const data = await transactionService.getAll({ limit: 100 });
+      setTransactions(data);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      message.error('Failed to load transactions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFlagTransaction = async (transactionId) => {
+    setFlaggingId(transactionId);
+    try {
+      await transactionService.flagTransaction(transactionId);
+      message.success('Transaction flagged as suspicious');
+      // Refresh the transaction list to show updated risk level
+      await fetchTransactions();
+    } catch (error) {
+      console.error('Error flagging transaction:', error);
+      message.error('Failed to flag transaction');
+    } finally {
+      setFlaggingId(null);
+    }
+  };
+
+  const columns = [
+    { 
+      title: 'Transaction ID', 
+      dataIndex: 'id', 
+      key: 'id', 
+      sorter: (a, b) => a.id.localeCompare(b.id),
+      width: '15%'
+    },
+    { 
+      title: 'From Account', 
+      dataIndex: 'fromAccount', 
+      key: 'fromAccount',
+      width: '15%'
+    },
+    { 
+      title: 'To Account', 
+      dataIndex: 'toAccount', 
+      key: 'toAccount',
+      width: '15%'
+    },
+    { 
+      title: 'Amount', 
+      dataIndex: 'amount', 
+      key: 'amount', 
+      render: (val) => `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
+      sorter: (a, b) => a.amount - b.amount,
+      width: '12%'
+    },
+    { 
+      title: 'Date', 
+      dataIndex: 'date', 
+      key: 'date', 
+      sorter: (a, b) => new Date(a.date) - new Date(b.date),
+      width: '15%'
+    },
+    {
+      title: 'Risk Level',
+      dataIndex: 'risk',
+      key: 'risk',
+      filters: [
+        { text: 'High', value: 'High' },
+        { text: 'Medium', value: 'Medium' },
+        { text: 'Low', value: 'Low' },
+      ],
+      onFilter: (value, record) => record.risk === value,
+      render: (risk) => {
+        const color = risk === 'High' ? 'red' : risk === 'Medium' ? 'orange' : 'green';
+        return <Tag color={color}>{risk}</Tag>;
+      },
+      width: '12%'
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => {
+        const color = status === 'Flagged' ? 'red' : status === 'Under Review' ? 'orange' : 'green';
+        return <Tag color={color}>{status}</Tag>;
+      },
+      width: '12%'
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      render: (_, record) => (
+        <Popconfirm
+          title="Flag Transaction"
+          description="Are you sure you want to flag this transaction as suspicious?"
+          onConfirm={() => handleFlagTransaction(record.id)}
+          okText="Yes"
+          cancelText="No"
+        >
+          <Button 
+            type="primary" 
+            danger 
+            size="small" 
+            icon={<FlagOutlined />}
+            loading={flaggingId === record.id}
+            disabled={record.risk === 'High' || flaggingId !== null}
+          >
+            Flag
+          </Button>
+        </Popconfirm>
+      ),
+      width: '8%'
+    },
+  ];
+
+  const filteredData = transactions.filter(
     (item) =>
       item.id.toLowerCase().includes(searchText.toLowerCase()) ||
       item.fromAccount.toLowerCase().includes(searchText.toLowerCase()) ||
       item.toAccount.toLowerCase().includes(searchText.toLowerCase())
   );
 
+  if (loading) {
+    return (
+      <Card title="Transaction List">
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+          <Spin size="large" tip="Loading transactions..." />
+        </div>
+      </Card>
+    );
+  }
+
   return (
-    <Card title="Transaction List">
+    <Card 
+      title="Transaction List"
+      extra={
+        <Button icon={<ReloadOutlined />} onClick={fetchTransactions} loading={loading}>
+          Refresh
+        </Button>
+      }
+    >
       <Space style={{ marginBottom: 16 }}>
         <Search
           placeholder="Search by Transaction ID or Account"
@@ -69,7 +168,12 @@ export default function TransactionListPage() {
           onChange={(e) => setSearchText(e.target.value)}
         />
       </Space>
-      <Table columns={columns} dataSource={filteredData} pagination={{ pageSize: 10 }} />
+      <Table 
+        columns={columns} 
+        dataSource={filteredData.map((item, idx) => ({ ...item, key: idx }))} 
+        pagination={{ pageSize: 10 }} 
+        loading={loading}
+      />
     </Card>
   );
 }

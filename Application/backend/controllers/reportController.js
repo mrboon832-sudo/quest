@@ -1,20 +1,92 @@
 const { driver } = require('../config/neo4j');
+const queries = require('../queries/fraudDetection');
+const crypto = require('crypto');
+
+// Generate unique ID without uuid dependency
+const generateReportId = () => crypto.randomUUID ? crypto.randomUUID() : 'report-' + Date.now();
 
 const reportController = {
   // Generate a report
   generateReport: async (req, res) => {
     const session = driver.session();
-    const { type, startDate, endDate } = req.body;
+    const { type = 'fraud_detection' } = req.body;
+    const reportId = generateReportId();
+    const generatedAt = new Date().toISOString();
+    
     try {
-      // Placeholder for report generation logic
-      res.json({
-        message: 'Report generation initiated',
+      // Run fraud detection queries to gather findings
+      let findingsCount = 0;
+      let summary = [];
+
+      // Query 1: Suspicious accounts
+      const suspiciousResult = await session.run(queries.findSuspiciousAccounts);
+      const suspiciousCount = suspiciousResult.records.length;
+      findingsCount += suspiciousCount;
+      if (suspiciousCount > 0) {
+        summary.push(`Found ${suspiciousCount} suspicious high-value accounts`);
+      }
+
+      // Query 2: Money laundering rings
+      const mlResult = await session.run(queries.findMoneyLaunderingRings);
+      const mlCount = mlResult.records.length;
+      findingsCount += mlCount;
+      if (mlCount > 0) {
+        summary.push(`Detected ${mlCount} potential money laundering patterns`);
+      }
+
+      // Query 3: Shared device fraud
+      const deviceResult = await session.run(queries.findSharedDeviceAccounts);
+      const deviceCount = deviceResult.records.length;
+      findingsCount += deviceCount;
+      if (deviceCount > 0) {
+        summary.push(`Identified ${deviceCount} account pairs sharing devices`);
+      }
+
+      // Query 4: High-risk transactions
+      const riskDist = await session.run(queries.getRiskDistribution);
+      let highRiskCount = 0;
+      riskDist.records.forEach(record => {
+        if (record.get('risk') === 'High') {
+          highRiskCount = record.get('count').toInt();
+        }
+      });
+      findingsCount += highRiskCount;
+      if (highRiskCount > 0) {
+        summary.push(`${highRiskCount} high-risk transactions identified`);
+      }
+
+      // Save report to database
+      const createReportQuery = `
+        CREATE (r:Report {
+          reportId: $reportId,
+          generatedAt: $generatedAt,
+          type: $type,
+          findingsCount: $findingsCount,
+          summary: $summary,
+          status: 'Completed'
+        })
+        RETURN r.reportId AS reportId, r.generatedAt AS date
+      `;
+
+      const reportResult = await session.run(createReportQuery, {
+        reportId,
+        generatedAt,
         type,
-        status: 'Pending',
+        findingsCount,
+        summary: summary.join(' | '),
+      });
+
+      res.json({
+        reportId,
+        generatedAt,
+        type,
+        findingsCount,
+        summary: summary.join(' | '),
+        status: 'Completed',
       });
     } catch (error) {
       console.error('Error generating report:', error);
-      res.status(500).json({ error: 'Failed to generate report' });
+      res.status(500).json({ error: 'Failed to generate report', details: error.message });
     } finally {
       await session.close();
     }
@@ -24,11 +96,20 @@ const reportController = {
   getReportHistory: async (req, res) => {
     const session = driver.session();
     try {
-      // Placeholder - return mock data for now
-      res.json([
-        { id: '1', name: 'Monthly Fraud Report - March 2026', date: '2026-04-01', type: 'PDF', status: 'Generated' },
-        { id: '2', name: 'Monthly Fraud Report - February 2026', date: '2026-03-01', type: 'PDF', status: 'Generated' },
-      ]);
+      const result = await session.run(`
+        MATCH (r:Report)
+        RETURN r.reportId AS id, r.name AS name, r.generatedDate AS date, 
+               r.type AS type, r.status AS status
+        ORDER BY r.generatedDate DESC
+      `);
+      const reports = result.records.map(record => ({
+        id: record.id,
+        name: record.name,
+        date: record.date.toString(),
+        type: record.type || 'PDF',
+        status: record.status || 'Generated',
+      }));
+      res.json(reports);
     } catch (error) {
       console.error('Error fetching report history:', error);
       res.status(500).json({ error: 'Failed to fetch report history' });

@@ -15,20 +15,23 @@ const transactionController = {
         ORDER BY t.timestamp DESC
         LIMIT toInteger($limit)
       `;
-      const result = await session.run(query, { limit: parseInt(limit) });
+      const result = await session.run(query, { limit: parseInt(limit) || 50 });
+      if (result.records.length === 0) {
+        return res.json([]);
+      }
       const transactions = result.records.map(record => ({
-        id: record.id,
-        fromAccount: record.fromAccount,
-        toAccount: record.toAccount,
-        amount: record.amount.toFloat(),
-        date: record.date.toString(),
-        risk: record.risk,
-        status: record.status || 'Cleared',
+        id: record.get('id'),
+        fromAccount: record.get('fromAccount'),
+        toAccount: record.get('toAccount'),
+        amount: record.get('amount').toFloat(),
+        date: record.get('date').toString(),
+        risk: record.get('risk'),
+        status: record.get('status') || 'Cleared',
       }));
       res.json(transactions);
     } catch (error) {
       console.error('Error fetching transactions:', error);
-      res.status(500).json({ error: 'Failed to fetch transactions' });
+      res.status(500).json({ error: 'Failed to fetch transactions', details: error.message });
     } finally {
       await session.close();
     }
@@ -48,18 +51,21 @@ const transactionController = {
         return res.status(404).json({ error: 'Transaction not found' });
       }
       const record = result.records[0];
+      const t = record.get('t');
+      const a = record.get('a');
+      const m = record.get('m');
       res.json({
-        id: record.t.properties.transactionId,
-        fromAccount: record.a.properties.accountId,
-        toAccount: record.m.properties.merchantId,
-        amount: record.t.properties.amount,
-        date: record.t.properties.timestamp,
-        risk: record.t.properties.riskLevel,
-        status: record.t.properties.status || 'Cleared',
+        id: t.properties.transactionId,
+        fromAccount: a.properties.accountId,
+        toAccount: m.properties.merchantId,
+        amount: t.properties.amount,
+        date: t.properties.timestamp,
+        risk: t.properties.riskLevel,
+        status: t.properties.status || 'Cleared',
       });
     } catch (error) {
       console.error('Error fetching transaction:', error);
-      res.status(500).json({ error: 'Failed to fetch transaction' });
+      res.status(500).json({ error: 'Failed to fetch transaction', details: error.message });
     } finally {
       await session.close();
     }
@@ -79,10 +85,10 @@ const transactionController = {
       if (result.records.length === 0) {
         return res.status(404).json({ error: 'Transaction not found' });
       }
-      res.json({ message: 'Transaction flagged successfully' });
+      res.json({ message: 'Transaction flagged successfully', transactionId: id });
     } catch (error) {
       console.error('Error flagging transaction:', error);
-      res.status(500).json({ error: 'Failed to flag transaction' });
+      res.status(500).json({ error: 'Failed to flag transaction', details: error.message });
     } finally {
       await session.close();
     }

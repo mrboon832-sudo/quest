@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const { testConnection } = require('./config/neo4j');
+const { authenticateToken } = require('./middleware/auth');
 
 // Load environment variables
 dotenv.config();
@@ -12,6 +13,9 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Auth routes (public)
+app.use('/api/auth', require('./routes/auth'));
 
 // Routes
 app.use('/api/dashboard', require('./routes/dashboard'));

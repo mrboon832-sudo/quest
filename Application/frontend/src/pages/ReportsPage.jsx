@@ -1,80 +1,168 @@
-import React from 'react';
-import { Card, Row, Col, Table, Button, Space } from 'antd';
-import { DownloadOutlined, FilePdfOutlined, FileExcelOutlined } from '@ant-design/icons';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
-
-const monthlyReportData = [
-  { month: 'Oct', fraudCases: 12, prevented: 10, loss: 45000 },
-  { month: 'Nov', fraudCases: 18, prevented: 15, loss: 62000 },
-  { month: 'Dec', fraudCases: 25, prevented: 22, loss: 78000 },
-  { month: 'Jan', fraudCases: 22, prevented: 19, loss: 71000 },
-  { month: 'Feb', fraudCases: 28, prevented: 25, loss: 89000 },
-  { month: 'Mar', fraudCases: 32, prevented: 30, loss: 95000 },
-];
-
-const reportHistory = [
-  { key: '1', name: 'Monthly Fraud Report - March 2026', date: '2026-04-01', type: 'PDF', status: 'Generated' },
-  { key: '2', name: 'Monthly Fraud Report - February 2026', date: '2026-03-01', type: 'PDF', status: 'Generated' },
-  { key: '3', name: 'Q1 2026 Risk Summary', date: '2026-04-02', type: 'Excel', status: 'Generated' },
-  { key: '4', name: 'Account Risk Assessment', date: '2026-04-05', type: 'PDF', status: 'Pending' },
-];
-
-const columns = [
-  { title: 'Report Name', dataIndex: 'name', key: 'name' },
-  { title: 'Generated Date', dataIndex: 'date', key: 'date' },
-  { title: 'Type', dataIndex: 'type', key: 'type' },
-  { title: 'Status', dataIndex: 'status', key: 'status' },
-  {
-    title: 'Action',
-    key: 'action',
-    render: (_, record) => (
-      <Button icon={<DownloadOutlined />} size="small" disabled={record.status === 'Pending'}>
-        Download
-      </Button>
-    ),
-  },
-];
+import React, { useState, useEffect } from 'react';
+import { Card, Row, Col, Table, Button, Space, Spin, message, Tag, Modal } from 'antd';
+import { DownloadOutlined, FilePdfOutlined, FileExcelOutlined, ReloadOutlined } from '@ant-design/icons';
+import { reportService } from '../services/api';
 
 export default function ReportsPage() {
+  const [reportHistory, setReportHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [generatingReport, setGeneratingReport] = useState(false);
+  const [reportType, setReportType] = useState('fraud_detection');
+
+  useEffect(() => {
+    fetchReportHistory();
+  }, []);
+
+  const fetchReportHistory = async () => {
+    setLoading(true);
+    try {
+      const data = await reportService.getReportHistory();
+      const formattedData = data.map((report, idx) => ({
+        key: idx,
+        id: report.id || report.reportId,
+        name: report.name || `Report ${idx + 1}`,
+        date: report.date || new Date().toISOString(),
+        type: report.type || 'Fraud Detection',
+        findings: report.findingsCount || 0,
+        summary: report.summary || 'No summary available',
+        status: report.status || 'Generated',
+      }));
+      setReportHistory(formattedData);
+    } catch (error) {
+      console.error('Error fetching report history:', error);
+      message.error('Failed to load report history');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGenerateReport = async (type) => {
+    setGeneratingReport(true);
+    try {
+      const response = await reportService.generateReport(type);
+      message.success('Report generated successfully!');
+      // Refresh the report history
+      await fetchReportHistory();
+    } catch (error) {
+      console.error('Error generating report:', error);
+      message.error('Failed to generate report');
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  const showReportDetails = (record) => {
+    Modal.info({
+      title: record.name,
+      width: 600,
+      content: (
+        <div>
+          <p><strong>Date:</strong> {new Date(record.date).toLocaleString()}</p>
+          <p><strong>Type:</strong> {record.type}</p>
+          <p><strong>Findings Count:</strong> {record.findings}</p>
+          <p><strong>Status:</strong> <Tag color={record.status === 'Completed' ? 'green' : 'orange'}>{record.status}</Tag></p>
+          <p><strong>Summary:</strong></p>
+          <p>{record.summary}</p>
+        </div>
+      ),
+      okText: 'Close',
+    });
+  };
+
+  const columns = [
+    { 
+      title: 'Report Name', 
+      dataIndex: 'name', 
+      key: 'name',
+      render: (text, record) => <a onClick={() => showReportDetails(record)}>{text}</a>
+    },
+    { 
+      title: 'Generated Date', 
+      dataIndex: 'date', 
+      key: 'date',
+      render: (date) => new Date(date).toLocaleString(),
+      sorter: (a, b) => new Date(a.date) - new Date(b.date),
+    },
+    { 
+      title: 'Type', 
+      dataIndex: 'type', 
+      key: 'type' 
+    },
+    { 
+      title: 'Findings', 
+      dataIndex: 'findings', 
+      key: 'findings',
+      align: 'center'
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => {
+        const color = status === 'Completed' ? 'green' : status === 'Pending' ? 'orange' : 'blue';
+        return <Tag color={color}>{status}</Tag>;
+      },
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      width: '15%',
+      render: (_, record) => (
+        <Button 
+          icon={<DownloadOutlined />} 
+          size="small"
+          onClick={() => showReportDetails(record)}
+        >
+          View
+        </Button>
+      ),
+    },
+  ];
+
+  if (loading) {
+    return (
+      <Card title="Report Management">
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+          <Spin size="large" tip="Loading reports..." />
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <div>
-      <Row gutter={[16, 16]}>
-        <Col span={12}>
-          <Card title="Fraud Cases vs Prevented">
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={monthlyReportData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="fraudCases" stroke="#ff4d4f" strokeWidth={2} name="Fraud Cases" />
-                <Line type="monotone" dataKey="prevented" stroke="#52c41a" strokeWidth={2} name="Prevented" />
-              </LineChart>
-            </ResponsiveContainer>
-          </Card>
-        </Col>
-        <Col span={12}>
-          <Card title="Monthly Financial Loss">
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={monthlyReportData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
-                <Area type="monotone" dataKey="loss" stroke="#1677ff" fill="#1677ff" fillOpacity={0.3} name="Loss ($)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </Card>
-        </Col>
-      </Row>
-
-      <Card title="Report History" style={{ marginTop: 16 }}>
+      <Card 
+        title="Report Management"
+        extra={
+          <Button icon={<ReloadOutlined />} onClick={fetchReportHistory} loading={loading}>
+            Refresh
+          </Button>
+        }
+      >
         <Space style={{ marginBottom: 16 }}>
-          <Button icon={<FilePdfOutlined />}>Generate PDF Report</Button>
-          <Button icon={<FileExcelOutlined />}>Generate Excel Report</Button>
+          <Button 
+            icon={<FilePdfOutlined />}
+            loading={generatingReport}
+            onClick={() => handleGenerateReport('fraud_detection')}
+          >
+            Generate Fraud Detection Report
+          </Button>
+          <Button 
+            icon={<FileExcelOutlined />}
+            loading={generatingReport}
+            onClick={() => handleGenerateReport('risk_summary')}
+          >
+            Generate Risk Summary Report
+          </Button>
         </Space>
-        <Table columns={columns} dataSource={reportHistory} pagination={false} />
+
+        <Table 
+          columns={columns} 
+          dataSource={reportHistory} 
+          pagination={{ pageSize: 10 }}
+          loading={loading}
+          locale={{ emptyText: 'No reports available. Generate one using the buttons above.' }}
+        />
       </Card>
     </div>
   );

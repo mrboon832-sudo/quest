@@ -7,6 +7,9 @@ const networkController = {
     const session = driver.session();
     try {
       const result = await session.run(queries.getFraudNetwork);
+      if (result.records.length === 0) {
+        return res.json({ nodes: [], edges: [] });
+      }
       const nodes = [];
       const edges = [];
       const nodeIds = new Set();
@@ -50,7 +53,7 @@ const networkController = {
       res.json({ nodes, edges });
     } catch (error) {
       console.error('Error fetching fraud network:', error);
-      res.status(500).json({ error: 'Failed to fetch fraud network' });
+      res.status(500).json({ error: 'Failed to fetch fraud network', details: error.message });
     } finally {
       await session.close();
     }
@@ -66,6 +69,9 @@ const networkController = {
          RETURN a, m`,
         { accountId }
       );
+      if (result.records.length === 0) {
+        return res.json([]);
+      }
       const connections = result.records.map(record => ({
         account: record.get('a').properties.accountId,
         merchant: record.get('m').properties.merchantId,
@@ -73,7 +79,7 @@ const networkController = {
       res.json(connections);
     } catch (error) {
       console.error('Error fetching account connections:', error);
-      res.status(500).json({ error: 'Failed to fetch account connections' });
+      res.status(500).json({ error: 'Failed to fetch account connections', details: error.message });
     } finally {
       await session.close();
     }

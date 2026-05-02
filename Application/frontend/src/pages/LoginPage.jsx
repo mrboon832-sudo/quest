@@ -1,44 +1,78 @@
-import React from 'react';
-import { Card, Form, Input, Button, Typography } from 'antd';
+import React, { useState } from 'react';
+import { Card, Form, Input, Button, Typography, Spin, message } from 'antd';
+import { authService } from '../services/api';
 
 const { Text } = Typography;
 
 export default function LoginPage({ onLogin }) {
-  const onFinish = ({ username }) => {
-    onLogin({ name: username || 'Test User' });
+  const [loading, setLoading] = useState(false);
+  const [form] = Form.useForm();
+
+  const onFinish = async (values) => {
+    const { username, password } = values;
+    setLoading(true);
+
+    try {
+      const response = await authService.login(username, password);
+      message.success('Login successful!');
+      onLogin({ 
+        name: response.user.username || username,
+        token: response.token 
+      });
+    } catch (error) {
+      message.error(error.response?.data?.error || 'Login failed. Please try again.');
+      console.error('Login error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="login-page">
-      <Card title="Quest UI Login" className="login-card">
-        <Form name="loginForm" layout="vertical" onFinish={onFinish} initialValues={{ username: 'testuser' }}>
-          <Form.Item
-            label="Username"
-            name="username"
-            rules={[{ required: true, message: 'Enter a username to continue.' }]}
+      <Card title="Quest - Fraud Detection System" className="login-card">
+        <Spin spinning={loading} tip="Logging in...">
+          <Form 
+            form={form}
+            name="loginForm" 
+            layout="vertical" 
+            onFinish={onFinish} 
+            initialValues={{ username: 'testuser', password: 'password123' }}
           >
-            <Input placeholder="Enter username" />
-          </Form.Item>
+            <Form.Item
+              label="Username"
+              name="username"
+              rules={[
+                { required: true, message: 'Username is required' },
+                { min: 3, message: 'Username must be at least 3 characters' }
+              ]}
+            >
+              <Input placeholder="Enter username" disabled={loading} />
+            </Form.Item>
 
-          <Form.Item
-            label="Password"
-            name="password"
-            rules={[{ required: true, message: 'Enter a password to continue.' }]}
-          >
-            <Input.Password placeholder="Enter password" />
-          </Form.Item>
+            <Form.Item
+              label="Password"
+              name="password"
+              rules={[
+                { required: true, message: 'Password is required' },
+                { min: 3, message: 'Password must be at least 3 characters' }
+              ]}
+            >
+              <Input.Password placeholder="Enter password" disabled={loading} />
+            </Form.Item>
 
-          <Form.Item>
-            <Button type="primary" htmlType="submit" block>
-              Log In
-            </Button>
-          </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" block loading={loading}>
+                Log In
+              </Button>
+            </Form.Item>
 
-          <Text type="secondary">
-            Mock login enabled: any credentials will work for UI testing without Neo4j.
-          </Text>
-        </Form>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              Demo credentials: testuser / password123 (any valid credentials work for testing)
+            </Text>
+          </Form>
+        </Spin>
       </Card>
     </div>
   );
 }
+

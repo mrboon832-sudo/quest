@@ -96,14 +96,15 @@ const fraudDetectionQueries = {
       END
   `,
 
-  // Get transaction trend (monthly)
+  // Get transaction trend (monthly) - relationship-based version
   getTransactionTrend: `
-    MATCH (t:Transaction)
+    MATCH (a:Account)-[t:TRANSACTED_WITH]->(m:Merchant)
     WITH t, datetime(t.timestamp) AS dt
-    RETURN dt.month AS month, 
-           count(CASE WHEN t.riskLevel = 'Normal' THEN 1 END) AS normal,
-           count(CASE WHEN t.riskLevel IN ['High', 'Medium'] THEN 1 END) AS flagged
-    ORDER BY month
+    WITH dt.year AS year, dt.month AS month, t.riskLevel AS riskLevel
+    RETURN year, month, 
+           count(CASE WHEN riskLevel = 'Low' THEN 1 END) AS normal,
+           count(CASE WHEN riskLevel IN ['High', 'Medium'] THEN 1 END) AS flagged
+    ORDER BY year, month
   `,
 };
 

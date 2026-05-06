@@ -98,16 +98,16 @@ const reportController = {
     try {
       const result = await session.run(`
         MATCH (r:Report)
-        RETURN r.reportId AS id, r.name AS name, r.generatedDate AS date, 
+        RETURN r.reportId AS reportId, r.generatedAt AS generatedAt, r.summary AS summary,
                r.type AS type, r.status AS status
-        ORDER BY r.generatedDate DESC
+        ORDER BY r.generatedAt DESC
       `);
       const reports = result.records.map(record => ({
-        id: record.id,
-        name: record.name,
-        date: record.date.toString(),
-        type: record.type || 'PDF',
-        status: record.status || 'Generated',
+        reportId: record.get('reportId'),
+        generatedAt: record.get('generatedAt')?.toString() || new Date().toISOString(),
+        summary: record.get('summary'),
+        type: record.get('type') || 'fraud_detection',
+        status: record.get('status') || 'Completed',
       }));
       res.json(reports);
     } catch (error) {

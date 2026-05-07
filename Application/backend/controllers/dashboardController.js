@@ -17,11 +17,11 @@ const dashboardController = {
       }
       const stats = result.records[0];
       res.json({
-        totalAccounts: stats.get('totalAccounts').toInt(),
-        totalTransactions: stats.get('totalTransactions').toInt(),
-        totalVolume: stats.get('totalVolume').toInt(),
-        highRiskTransactions: stats.get('highRiskTransactions').toInt(),
-      });
+      totalAccounts: stats.get('totalAccounts').toInt(),
+      totalTransactions: stats.get('totalTransactions').toInt(),
+      totalVolume: parseFloat(stats.get('totalVolume')),
+      highRiskTransactions: stats.get('flaggedTransactions').toInt(),
+    });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
       res.status(500).json({ error: 'Failed to fetch dashboard statistics', details: error.message });

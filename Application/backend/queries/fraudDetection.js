@@ -75,14 +75,18 @@ const fraudDetectionQueries = {
 
   // Get dashboard statistics
   getDashboardStats: `
+  CALL {
     MATCH (a:Account)
-    OPTIONAL MATCH (a)-[t:TRANSACTED_WITH]->()
-    RETURN count(DISTINCT a) AS totalAccounts,
-           count(t) AS totalTransactions,
-           sum(t.amount) AS totalVolume,
-           count(CASE WHEN t.riskLevel = 'High' THEN 1 END) AS highRiskTransactions
-  `,
-
+    RETURN count(DISTINCT a) AS totalAccounts
+  }
+  CALL {
+    MATCH ()-[t:TRANSACTED_WITH]->()
+    RETURN count(t) AS totalTransactions,
+           COALESCE(sum(t.amount), 0) AS totalVolume,
+           count(CASE WHEN t.riskLevel = 'High' THEN 1 END) AS flaggedTransactions
+  }
+  RETURN totalAccounts, totalTransactions, totalVolume, flaggedTransactions
+`,
   // Get risk distribution
   getRiskDistribution: `
     MATCH (a:Account)-[t:TRANSACTED_WITH]->()

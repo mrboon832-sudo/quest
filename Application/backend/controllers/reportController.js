@@ -105,14 +105,17 @@ const reportController = {
         SKIP toInteger($offset)
         LIMIT toInteger($limit)
       `, { offset: parseInt(offset) || 0, limit: parseInt(limit) || 50 });
-      const reports = result.records.map(record => ({
-        reportId: record.get('reportId'),
-        generatedAt: record.get('generatedAt')?.toString() || new Date().toISOString(),
-        summary: record.get('summary'),
-        type: record.get('type') || 'fraud_detection',
-        status: record.get('status') || 'Completed',
-        findingsCount: record.get('findingsCount')?.toInt() || 0,
-      }));
+      const reports = result.records.map(record => {
+        const findingsVal = record.get('findingsCount');
+        return {
+          reportId: record.get('reportId'),
+          generatedAt: record.get('generatedAt')?.toString() || new Date().toISOString(),
+          summary: record.get('summary'),
+          type: record.get('type') || 'fraud_detection',
+          status: record.get('status') || 'Completed',
+          findingsCount: typeof findingsVal === 'number' ? findingsVal : (findingsVal?.toInt?.() || 0),
+        };
+      });
       res.json(reports);
     } catch (error) {
       console.error('Error fetching report history:', error);
@@ -140,13 +143,14 @@ const reportController = {
       }
 
       const report = result.records[0];
+      const findingsVal = report.get('findingsCount');
       const data = {
         reportId: report.get('reportId'),
         generatedAt: report.get('generatedAt')?.toString() || '',
         summary: report.get('summary'),
         type: report.get('type'),
         status: report.get('status'),
-        findingsCount: report.get('findingsCount')?.toInt() || 0,
+        findingsCount: typeof findingsVal === 'number' ? findingsVal : (findingsVal?.toInt?.() || 0),
       };
 
       if (format === 'json') {

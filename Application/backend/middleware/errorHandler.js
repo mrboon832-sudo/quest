@@ -1,3 +1,5 @@
+const crypto = require('crypto');
+
 // Request ID middleware
 const requestId = (req, res, next) => {
   req.id = req.headers['x-request-id'] || crypto.randomUUID();

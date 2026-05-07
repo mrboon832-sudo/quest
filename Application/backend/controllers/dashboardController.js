@@ -60,6 +60,7 @@ const dashboardController = {
         return res.json([]);
       }
       const trend = result.records.map(record => ({
+        year: record.get('year').toInt(),
         month: record.get('month').toInt(),
         normal: record.get('normal').toInt(),
         flagged: record.get('flagged').toInt(),

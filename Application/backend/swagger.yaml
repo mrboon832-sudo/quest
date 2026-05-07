@@ -1,0 +1,560 @@
+openapi: 3.0.0
+info:
+  title: Quest - Fraud Detection API
+  description: |
+    A comprehensive fraud detection and risk monitoring system for financial transactions.
+    The API provides endpoints for authentication, dashboard analytics, transaction management,
+    network visualization, and report generation.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@quest-fraud.local
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:5000/api
+    description: Local development server
+  - url: https://api.quest-fraud.com/api
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Dashboard
+    description: Analytics and statistics endpoints
+  - name: Transactions
+    description: Transaction management and flagging
+  - name: Network
+    description: Fraud network visualization
+  - name: Reports
+    description: Report generation and download
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Verify API is running
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: OK
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+                - email
+              properties:
+                username:
+                  type: string
+                  minLength: 3
+                password:
+                  type: string
+                  minLength: 6
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  enum: [user, analyst, admin]
+                  default: user
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /dashboard/stats:
+    get:
+      tags:
+        - Dashboard
+      summary: Get dashboard statistics
+      description: Returns overall statistics for the fraud detection dashboard
+      operationId: getDashboardStats
+      responses:
+        '200':
+          description: Dashboard statistics retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalAccounts:
+                    type: integer
+                    example: 1250
+                  totalTransactions:
+                    type: integer
+                    example: 45820
+                  totalVolume:
+                    type: number
+                    format: double
+                    example: 5234850.50
+                  highRiskTransactions:
+                    type: integer
+                    example: 342
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /dashboard/risk-distribution:
+    get:
+      tags:
+        - Dashboard
+      summary: Get risk distribution
+      description: Returns distribution of transactions by risk level
+      operationId: getRiskDistribution
+      responses:
+        '200':
+          description: Risk distribution retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    risk:
+                      type: string
+                      enum: [Low, Medium, High]
+                    count:
+                      type: integer
+                example:
+                  - risk: Low
+                    count: 45000
+                  - risk: Medium
+                    count: 600
+                  - risk: High
+                    count: 220
+
+  /dashboard/trend:
+    get:
+      tags:
+        - Dashboard
+      summary: Get transaction trend
+      description: Returns monthly transaction trend data with risk breakdown
+      operationId: getTransactionTrend
+      responses:
+        '200':
+          description: Transaction trend retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    year:
+                      type: integer
+                    month:
+                      type: integer
+                    normal:
+                      type: integer
+                    flagged:
+                      type: integer
+
+  /transactions:
+    get:
+      tags:
+        - Transactions
+      summary: Get all transactions
+      parameters:
+        - name: riskLevel
+          in: query
+          schema:
+            type: string
+            enum: [Low, Medium, High]
+          description: Filter by risk level
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: skip
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
+
+  /transactions/{id}:
+    get:
+      tags:
+        - Transactions
+      summary: Get transaction details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transaction details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '404':
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /transactions/{id}/flag:
+    put:
+      tags:
+        - Transactions
+      summary: Flag transaction as suspicious
+      description: 'Requires admin role'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Transaction flagged successfully
+        '403':
+          description: Access denied - admin role required
+        '404':
+          description: Transaction not found
+
+  /network:
+    get:
+      tags:
+        - Network
+      summary: Get fraud network graph
+      description: Returns nodes and edges for network visualization
+      operationId: getFraudNetwork
+      responses:
+        '200':
+          description: Network data retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nodes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/NetworkNode'
+                  edges:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/NetworkEdge'
+
+  /network/account/{accountId}:
+    get:
+      tags:
+        - Network
+      summary: Get account connections
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Account connections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    account:
+                      type: string
+                    merchant:
+                      type: string
+
+  /reports/generate:
+    post:
+      tags:
+        - Reports
+      summary: Generate fraud detection report
+      description: 'Requires admin role. Generates a comprehensive fraud detection report.'
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  default: fraud_detection
+                  enum: [fraud_detection, risk_analysis, network_analysis]
+      responses:
+        '200':
+          description: Report generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '403':
+          description: Access denied - admin role required
+        '500':
+          description: Report generation failed
+
+  /reports:
+    get:
+      tags:
+        - Reports
+      summary: Get report history
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Report'
+
+  /reports/{id}/download:
+    get:
+      tags:
+        - Reports
+      summary: Download report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, csv, pdf]
+            default: csv
+      responses:
+        '200':
+          description: Report file
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: object
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Report not found
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT access token
+        user:
+          type: object
+          properties:
+            userId:
+              type: string
+            username:
+              type: string
+            email:
+              type: string
+            role:
+              type: string
+              enum: [user, analyst, admin]
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+        requestId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+        fromAccount:
+          type: string
+        toMerchant:
+          type: string
+        amount:
+          type: number
+          format: double
+        timestamp:
+          type: string
+          format: date-time
+        riskLevel:
+          type: string
+          enum: [Low, Medium, High]
+        status:
+          type: string
+
+    Report:
+      type: object
+      properties:
+        reportId:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        type:
+          type: string
+        status:
+          type: string
+          enum: [Pending, Completed, Failed]
+        summary:
+          type: string
+        findingsCount:
+          type: integer
+
+    NetworkNode:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+          enum: [Account, Merchant]
+        riskLevel:
+          type: string
+          enum: [Low, Medium, High, Unknown]
+
+    NetworkEdge:
+      type: object
+      properties:
+        id:
+          type: string
+        source:
+          type: string
+        target:
+          type: string
+        label:
+          type: string
+        riskLevel:
+          type: string
+          enum: [Low, Medium, High, Unknown]

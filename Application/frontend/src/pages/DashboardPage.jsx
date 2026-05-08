@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Statistic, Table, Tag, Spin, message } from 'antd';
-import { AlertOutlined, UserOutlined, TransactionOutlined, RiseOutlined } from '@ant-design/icons';
+import { AlertOutlined, UserOutlined, TransactionOutlined } from '@ant-design/icons';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { dashboardService } from '../services/api';
 
@@ -20,30 +20,57 @@ export default function DashboardPage() {
   });
   const [riskData, setRiskData] = useState([]);
   const [transactionTrend, setTransactionTrend] = useState([]);
+  const [recentTransactions, setRecentTransactions] = useState([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
         // Fetch all dashboard data in parallel
-        const [statsData, riskDistData, trendData] = await Promise.all([
+        const [statsData, riskDistData, trendData, transactionsData] = await Promise.all([
           dashboardService.getStats(),
           dashboardService.getRiskDistribution(),
           dashboardService.getTransactionTrend(),
+          dashboardService.getTransactions(),
         ]);
 
         setStats(statsData);
         
         // Transform risk distribution data to include colors
-        const transformedRiskData = riskDistData.map(item => ({
-          name: item.risk || 'Unknown',
-          value: item.count,
-          color: RISK_COLORS[item.risk] || '#999',
-        }));
+        const transformedRiskData = (riskDistData || [])
+          .map(item => ({
+            name: item.risk || item.name || 'Unknown',
+            value: Number(item.count ?? item.value ?? 0),
+            color: RISK_COLORS[item.risk || item.name] || '#999',
+          }))
+          .filter(item => item.value > 0);
         setRiskData(transformedRiskData);
 
-        // Transform transaction trend data
-        setTransactionTrend(trendData);
+        // Transform transaction trend data to chart-friendly labels
+        const transformedTrend = (trendData || []).map((item) => ({
+          ...item,
+          month: item.month ? `M${item.month}` : 'Unknown',
+          normal: Number(item.normal || 0),
+          flagged: Number(item.flagged || 0),
+        }));
+        setTransactionTrend(transformedTrend);
+
+        // Set recent transactions (limit to 5)
+        const txArray = Array.isArray(transactionsData)
+          ? transactionsData
+          : (Array.isArray(transactionsData?.transactions) ? transactionsData.transactions : []);
+
+        const recentTxs = txArray.slice(0, 5).map((tx, index) => ({
+          id: tx.id || tx.transaction_id || `TXN${String(index + 1).padStart(3, '0')}`,
+          fromAccount: tx.fromAccount || tx.from_account || tx.sourceAccount || '-',
+          toAccount: tx.toAccount || tx.to_account || tx.destinationAccount || '-',
+          amount: parseFloat(tx.amount) || 0,
+          risk: tx.risk || tx.riskLevel || (tx.flagged ? 'High' : 'Low'),
+          date: tx.date
+            ? new Date(tx.date).toISOString().split('T')[0]
+            : (tx.timestamp ? new Date(tx.timestamp).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
+        }));
+        setRecentTransactions(recentTxs);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         message.error('Failed to load dashboard data');
@@ -77,14 +104,6 @@ export default function DashboardPage() {
       },
     },
     { title: 'Date', dataIndex: 'date', key: 'date', width: '10%' },
-  ];
-
-  const recentTransactions = [
-    { id: 'TXN001', fromAccount: 'ACC-4521', toAccount: 'MER-001', amount: 15234.50, risk: 'High', date: '2026-04-07' },
-    { id: 'TXN002', fromAccount: 'ACC-3312', toAccount: 'MER-002', amount: 2340.00, risk: 'Medium', date: '2026-04-07' },
-    { id: 'TXN003', fromAccount: 'ACC-7789', toAccount: 'MER-003', amount: 890.25, risk: 'Low', date: '2026-04-06' },
-    { id: 'TXN004', fromAccount: 'ACC-1122', toAccount: 'MER-004', amount: 45200.00, risk: 'High', date: '2026-04-06' },
-    { id: 'TXN005', fromAccount: 'ACC-5544', toAccount: 'MER-005', amount: 1250.75, risk: 'Low', date: '2026-04-05' },
   ];
 
   if (loading) {

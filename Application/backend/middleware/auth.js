@@ -15,16 +15,25 @@ const authenticateToken = (req, res, next) => {
     if (err) {
       return res.status(403).json({ error: 'Invalid or expired token' });
     }
-    req.user = user;
+    req.user = user;            // <-- now contains userId, role, timestamp, etc.
     next();
   });
 };
 
-// Function to generate JWT token
-const generateToken = (userId) => {
-  return jwt.sign({ userId, timestamp: Date.now() }, JWT_SECRET, {
-    expiresIn: '24h',
-  });
+/**
+ * Generate a JWT token.
+ * Accepts either a plain `userId` string **or** an object with any payload you want
+ * (e.g. { userId, role }).
+ */
+const generateToken = (payload) => {
+  // If a plain string is passed, turn it into an object { userId: <string> }
+  const tokenPayload = typeof payload === 'string' ? { userId: payload } : payload;
+
+  return jwt.sign(
+    { ...tokenPayload, timestamp: Date.now() }, // spread role, userId, etc.
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
 };
 
 module.exports = { authenticateToken, generateToken, JWT_SECRET };

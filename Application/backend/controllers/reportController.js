@@ -1,12 +1,22 @@
 const { driver } = require('../config/neo4j');
+const neo4j = require('neo4j-driver'); 
 const queries = require('../queries/fraudDetection');
 const crypto = require('crypto');
 
-// Generate unique ID without uuid dependency
+// Helper to safely convert Neo4j values to JS numbers
+const safeInt = (val) => {
+  if (val === null || val === undefined) return 0;
+  if (typeof val.toInt === 'function') return val.toInt();
+  return parseInt(val, 10) || 0;
+};
+
+// Helper to safely convert to string
+const safeStr = (val) => (val ? val.toString() : '');
+
 const generateReportId = () => crypto.randomUUID ? crypto.randomUUID() : 'report-' + Date.now();
 
 const reportController = {
-  // Generate a report
+  // 1. Generate a report
   generateReport: async (req, res) => {
     const session = driver.session();
     const { type = 'fraud_detection' } = req.body;
@@ -14,7 +24,6 @@ const reportController = {
     const generatedAt = new Date().toISOString();
     
     try {
-      // Run fraud detection queries to gather findings
       let findingsCount = 0;
       let summary = [];
 
@@ -47,7 +56,7 @@ const reportController = {
       let highRiskCount = 0;
       riskDist.records.forEach(record => {
         if (record.get('risk') === 'High') {
-          highRiskCount = record.get('count').toInt();
+          highRiskCount += safeInt(record.get('count'));
         }
       });
       findingsCount += highRiskCount;
@@ -65,14 +74,14 @@ const reportController = {
           summary: $summary,
           status: 'Completed'
         })
-        RETURN r.reportId AS reportId, r.generatedAt AS date
+        RETURN r.reportId AS reportId
       `;
 
-      const reportResult = await session.run(createReportQuery, {
+      await session.run(createReportQuery, {
         reportId,
         generatedAt,
         type,
-        findingsCount,
+        findingsCount: neo4j.int(findingsCount),
         summary: summary.join(' | '),
       });
 
@@ -92,82 +101,91 @@ const reportController = {
     }
   },
 
-  // Get report history
+  // 2. GET REPORT HISTORY (FIXED potential .toInt() crash)
   getReportHistory: async (req, res) => {
     const session = driver.session();
-    const { limit = 50, offset = 0 } = req.query;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = parseInt(req.query.offset) || 0;
+    
     try {
-      const result = await session.run(`
+      const result = await session.run(
+        `
         MATCH (r:Report)
-        RETURN r.reportId AS reportId, r.generatedAt AS generatedAt, r.summary AS summary,
-               r.type AS type, r.status AS status, r.findingsCount AS findingsCount
+        RETURN r.reportId    AS reportId,
+               r.generatedAt AS generatedAt,
+               r.summary     AS summary,
+               r.type        AS type,
+               r.status      AS status,
+               r.findingsCount AS findingsCount
         ORDER BY r.generatedAt DESC
-        SKIP toInteger($offset)
-        LIMIT toInteger($limit)
-      `, { offset: parseInt(offset) || 0, limit: parseInt(limit) || 50 });
-      const reports = result.records.map(record => {
-        const findingsVal = record.get('findingsCount');
-        return {
-          reportId: record.get('reportId'),
-          generatedAt: record.get('generatedAt')?.toString() || new Date().toISOString(),
-          summary: record.get('summary'),
-          type: record.get('type') || 'fraud_detection',
-          status: record.get('status') || 'Completed',
-          findingsCount: typeof findingsVal === 'number' ? findingsVal : (findingsVal?.toInt?.() || 0),
-        };
-      });
+        SKIP $offset
+        LIMIT $limit
+        `,
+        { 
+          offset: neo4j.int(offset), 
+          limit: neo4j.int(limit) 
+        }
+      );
+
+      const reports = result.records.map(rec => ({
+        id: rec.get('reportId'),
+        reportId: rec.get('reportId'),
+        generatedAt: safeStr(rec.get('generatedAt')),
+        summary: rec.get('summary'),
+        type: rec.get('type') || 'fraud_detection',
+        status: rec.get('status') || 'Completed',
+        findingsCount: safeInt(rec.get('findingsCount')),
+      }));
+
       res.json(reports);
-    } catch (error) {
-      console.error('Error fetching report history:', error);
-      res.status(500).json({ error: 'Failed to fetch report history' });
+    } catch (err) {
+      console.error('Error fetching report history:', err);
+      res.status(500).json({ error: 'Failed to fetch report history', details: err.message });
     } finally {
       await session.close();
     }
   },
 
-  // Download report as CSV or JSON
+  // 3. Download report
   downloadReport: async (req, res) => {
     const session = driver.session();
     const { id } = req.params;
     const { format = 'csv' } = req.query;
-    
+
     try {
-      const result = await session.run(`
-        MATCH (r:Report {reportId: $reportId})
-        RETURN r.reportId AS reportId, r.generatedAt AS generatedAt, r.summary AS summary,
-               r.type AS type, r.status AS status, r.findingsCount AS findingsCount
-      `, { reportId: id });
+      const result = await session.run(
+        `MATCH (r:Report {reportId: $reportId})
+         RETURN r`,
+        { reportId: id }
+      );
 
       if (result.records.length === 0) {
         return res.status(404).json({ error: 'Report not found' });
       }
 
-      const report = result.records[0];
-      const findingsVal = report.get('findingsCount');
+      const report = result.records[0].get('r').properties;
       const data = {
-        reportId: report.get('reportId'),
-        generatedAt: report.get('generatedAt')?.toString() || '',
-        summary: report.get('summary'),
-        type: report.get('type'),
-        status: report.get('status'),
-        findingsCount: typeof findingsVal === 'number' ? findingsVal : (findingsVal?.toInt?.() || 0),
+        reportId: report.reportId,
+        generatedAt: safeStr(report.generatedAt),
+        summary: report.summary,
+        type: report.type,
+        status: report.status,
+        findingsCount: safeInt(report.findingsCount),
       };
 
       if (format === 'json') {
         res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Disposition', `attachment; filename="report-${id}.json"`);
-        res.send(JSON.stringify(data, null, 2));
-      } else if (format === 'csv') {
-        const csv = `Report ID,Generated At,Type,Status,Findings Count\n"${data.reportId}","${data.generatedAt}","${data.type}","${data.status}",${data.findingsCount}\n\nSummary:\n"${data.summary}"`;
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', `attachment; filename="report-${id}.csv"`);
-        res.send(csv);
-      } else {
-        res.status(400).json({ error: 'Invalid format. Use csv or json.' });
+        return res.json(data);
       }
-    } catch (error) {
-      console.error('Error downloading report:', error);
-      res.status(500).json({ error: 'Failed to download report', details: error.message });
+
+      // Default to CSV
+      const csv = `Report ID,Generated At,Type,Status,Findings Count\n"${data.reportId}","${data.generatedAt}","${data.type}","${data.status}",${data.findingsCount}\n\nSummary:\n"${data.summary}"`;
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="report-${id}.csv"`);
+      res.send(csv);
+    } catch (e) {
+      console.error('Download report error:', e);
+      res.status(500).json({ error: 'Failed to download report' });
     } finally {
       await session.close();
     }

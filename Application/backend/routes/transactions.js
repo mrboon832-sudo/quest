@@ -6,6 +6,7 @@ const { requireAdmin } = require('../middleware/roleCheck');
 
 router.get('/', transactionController.getAll);
 router.get('/:id', transactionController.getById);
+router.post('/', authenticateToken, transactionController.createTransaction);
 router.put('/:id/flag', authenticateToken, requireAdmin, transactionController.flagTransaction);
 
 module.exports = router;

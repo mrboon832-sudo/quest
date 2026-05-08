@@ -4,7 +4,7 @@ import { authService } from '../services/api';
 
 const { Text } = Typography;
 
-export default function LoginPage({ onLogin }) {
+export default function LoginPage({ onLogin, onRegisterClick }) {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
 
@@ -17,7 +17,8 @@ export default function LoginPage({ onLogin }) {
       message.success('Login successful!');
       onLogin({ 
         name: response.user.username || username,
-        token: response.token 
+        token: response.token,
+        role: response.user.role
       });
     } catch (error) {
       message.error(error.response?.data?.error || 'Login failed. Please try again.');
@@ -39,14 +40,14 @@ export default function LoginPage({ onLogin }) {
             initialValues={{ username: 'testuser', password: 'password123' }}
           >
             <Form.Item
-              label="Username"
+              label="Email or Username"
               name="username"
               rules={[
-                { required: true, message: 'Username is required' },
-                { min: 3, message: 'Username must be at least 3 characters' }
+                { required: true, message: 'Username or email is required' },
+                { min: 3, message: 'Must be at least 3 characters' }
               ]}
             >
-              <Input placeholder="Enter username" disabled={loading} />
+              <Input placeholder="Enter email or username" disabled={loading} />
             </Form.Item>
 
             <Form.Item
@@ -66,8 +67,21 @@ export default function LoginPage({ onLogin }) {
               </Button>
             </Form.Item>
 
-            <Text type="secondary" style={{ fontSize: '12px' }}>
-              Demo credentials: testuser / password123 (any valid credentials work for testing)
+            <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                Don't have an account?{' '}
+                <Button type="link" size="small" onClick={onRegisterClick} disabled={loading}>
+                  Sign Up
+                </Button>
+              </Text>
+            </div>
+
+            <Text type="secondary" style={{ fontSize: '11px', display: 'block', marginTop: '12px' }}>
+              <strong>Demo Credentials:</strong>
+              <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                <li>Admin: admin / admin123</li>
+                <li>Or register a new account</li>
+              </ul>
             </Text>
           </Form>
         </Spin>

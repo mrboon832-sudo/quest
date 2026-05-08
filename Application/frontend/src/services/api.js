@@ -27,19 +27,22 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // REMOVE: window.location.href = '/login'; <--- This was causing the loop
+      
       localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
       message.error('Session expired. Please login again.');
-      window.location.href = '/login';
     } else if (error.response?.status === 403) {
       message.error('Access denied. Please ensure you are logged in.');
     } else if (error.response?.status === 500) {
-      message.error(error.response.data?.error || 'Server error occurred');
+      message.error(error.response?.data?.error || 'Server error occurred');
     } else if (!error.response) {
       message.error('Network error. Please check your connection.');
     }
     return Promise.reject(error);
   }
 );
+
 
 export const authService = {
   login: async (username, password) => {
@@ -55,6 +58,30 @@ export const authService = {
       throw error;
     }
   },
+  register: async (fullName, email, password, phone, role = 'customer') => {
+    try {
+      const response = await api.post('/auth/register', { 
+        fullName, email, password, phone, role
+      });
+      if (response.data.token) {
+        localStorage.setItem('authToken', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
+      return response.data;
+    } catch (error) {
+      message.error(error.response?.data?.error || 'Registration failed');
+      throw error;
+    }
+  },
+  // ADD THIS FUNCTION HERE!
+  verify: async () => {
+    try {
+      const response = await api.get('/auth/verify');
+      return response.data;
+    } catch (error) {
+      throw error; 
+    }
+  },
   logout: () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
@@ -66,6 +93,7 @@ export const authService = {
     return user ? JSON.parse(user) : null;
   },
 };
+
 
 export const dashboardService = {
   getStats: async () => {
@@ -96,6 +124,15 @@ export const dashboardService = {
       console.error('Error fetching transaction trend:', error);
       message.error('Failed to fetch transaction trend');
       throw error;
+    }
+  },
+  getTransactions: async () => {
+    try {
+      const response = await api.get('/transactions');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      return []; // Return empty array as fallback
     }
   },
 };
@@ -176,6 +213,60 @@ export const reportService = {
     } catch (error) {
       console.error('Error fetching report history:', error);
       message.error('Failed to fetch report history');
+      throw error;
+    }
+  },
+};
+
+export const accountService = {
+  getBalance: async () => {
+    try {
+      const response = await api.get('/accounts/balance');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching account balance:', error);
+      throw error;
+    }
+  },
+  getRecentTransactions: async (limit = 5) => {
+    try {
+      const response = await api.get('/accounts/transactions', { params: { limit } });
+      return response.data.transactions || [];
+    } catch (error) {
+      console.error('Error fetching recent transactions:', error);
+      return [];
+    }
+  },
+  deposit: async (amount) => {
+    try {
+      const response = await api.post('/accounts/deposit', { amount });
+      message.success('Deposit successful');
+      return response.data;
+    } catch (error) {
+      console.error('Error depositing:', error);
+      message.error(error.response?.data?.error || 'Deposit failed');
+      throw error;
+    }
+  },
+  withdraw: async (amount) => {
+    try {
+      const response = await api.post('/accounts/withdraw', { amount });
+      message.success('Withdrawal successful');
+      return response.data;
+    } catch (error) {
+      console.error('Error withdrawing:', error);
+      message.error(error.response?.data?.error || 'Withdrawal failed');
+      throw error;
+    }
+  },
+  transfer: async (toAccountId, amount) => {
+    try {
+      const response = await api.post('/accounts/transfer', { toAccountId, amount });
+      message.success('Transfer successful');
+      return response.data;
+    } catch (error) {
+      console.error('Error transferring:', error);
+      message.error(error.response?.data?.error || 'Transfer failed');
       throw error;
     }
   },

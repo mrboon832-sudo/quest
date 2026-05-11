@@ -69,6 +69,24 @@ export default function ReportsPage() {
     });
   };
 
+  const handleDownloadReport = async (record) => {
+    try {
+      const blob = await reportService.downloadReport(record.id, 'csv');
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `report-${record.id}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      message.success('Report downloaded successfully!');
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      message.error('Failed to download report');
+    }
+  };
+
   const columns = [
     { 
       title: 'Report Name', 
@@ -106,15 +124,24 @@ export default function ReportsPage() {
     {
       title: 'Action',
       key: 'action',
-      width: '15%',
+      width: '20%',
       render: (_, record) => (
-        <Button 
-          icon={<DownloadOutlined />} 
-          size="small"
-          onClick={() => showReportDetails(record)}
-        >
-          View
-        </Button>
+        <Space>
+          <Button 
+            icon={<DownloadOutlined />} 
+            size="small"
+            onClick={() => handleDownloadReport(record)}
+          >
+            Download
+          </Button>
+          <Button 
+            type="link"
+            size="small"
+            onClick={() => showReportDetails(record)}
+          >
+            View
+          </Button>
+        </Space>
       ),
     },
   ];

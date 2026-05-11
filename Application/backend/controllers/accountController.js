@@ -44,8 +44,7 @@ const accountController = {
     }
   },
 
-  // 2. Get Recent Transactions - FIXED: Safer query
-  getRecentTransactions: async (req, res) => {
+    getRecentTransactions: async (req, res) => {
     const userId = req.user?.userId;
     const limit = parseInt(req.query.limit) || 5;
 
@@ -56,12 +55,16 @@ const accountController = {
       const result = await session.run(
         `
         MATCH (c:Customer {customer_id: $userId})-[:OWNS_ACCOUNT]->(a:Account)
-        OPTIONAL MATCH (a)-[r:SENT_TRANSACTION]->(t:Transaction)
+        OPTIONAL MATCH (a)-[r:SENT_TRANSACTION|RECEIVED_TRANSACTION]->(t:Transaction)
         RETURN t.transaction_id AS id,
                COALESCE(t.amount, 0.0) AS amount,
                t.timestamp AS date,
                COALESCE(t.status, 'Completed') AS status,
-               'Withdrawal' AS type,
+               // Fix: Determine type from relationship direction
+               CASE 
+                 WHEN type(r) = 'SENT_TRANSACTION' THEN 'Withdrawal'
+                 WHEN type(r) = 'RECEIVED_TRANSACTION' THEN 'Deposit'
+               END AS type,
                COALESCE(t.risk_score, 0.0) AS risk
         ORDER BY t.timestamp DESC
         LIMIT $limit

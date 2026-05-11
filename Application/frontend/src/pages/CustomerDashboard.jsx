@@ -36,7 +36,6 @@ export default function CustomerDashboard() {
       } catch (error) {
         console.error('Error fetching customer data:', error);
         message.error('Failed to load account data');
-        setAccountBalance(1000); // Fallback
       } finally {
         setLoading(false);
       }
@@ -55,7 +54,7 @@ export default function CustomerDashboard() {
     try {
       const result = await accountService.deposit(parseFloat(depositAmount));
       setAccountBalance(result.newBalance);
-      message.success(`Deposit successful! New balance: $${result.newBalance.toFixed(2)}`);
+      message.success(`Deposit successful! New balance: M${result.newBalance.toFixed(2)}`);
       setDepositAmount('');
       setDepositModal(false);
     } catch (error) {
@@ -81,7 +80,7 @@ export default function CustomerDashboard() {
     try {
       const result = await accountService.withdraw(amount);
       setAccountBalance(result.newBalance);
-      message.success(`Withdrawal successful! New balance: $${result.newBalance.toFixed(2)}`);
+      message.success(`Withdrawal successful! New balance: M${result.newBalance.toFixed(2)}`);
       setWithdrawAmount('');
       setWithdrawModal(false);
     } catch (error) {
@@ -108,7 +107,7 @@ export default function CustomerDashboard() {
       const result = await accountService.transfer(transferTo, amount);
       setAccountBalance(result.newBalance);
       
-      message.success(`Transfer of $${amount.toFixed(2)} sent to ${transferTo}! New balance: $${result.newBalance.toFixed(2)}`);
+      message.success(`Transfer of M${amount.toFixed(2)} sent to ${transferTo}! New balance: M${result.newBalance.toFixed(2)}`);
       setTransferAmount('');
       setTransferTo('');
       setTransferModal(false);
@@ -161,7 +160,7 @@ export default function CustomerDashboard() {
       align: 'right',
       render: (amount) => (
         <span style={{ fontWeight: 'bold' }}>
-          ${typeof amount === 'number' ? amount.toFixed(2) : amount}
+          M{typeof amount === 'number' ? amount.toFixed(2) : amount}
         </span>
       ),
     },
@@ -191,7 +190,7 @@ export default function CustomerDashboard() {
             <div style={{ textAlign: 'center', padding: '20px' }}>
               <div style={{ fontSize: '14px', marginBottom: '10px', opacity: 0.9 }}>Current Balance</div>
               <div style={{ fontSize: '36px', fontWeight: 'bold', marginBottom: '20px' }}>
-                ${accountBalance.toFixed(2)}
+                M{accountBalance.toFixed(2)}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
                 <Button 
@@ -268,14 +267,14 @@ export default function CustomerDashboard() {
       >
         <div style={{ marginBottom: '16px' }}>
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-            Amount (USD)
+            Amount (LSL)
           </label>
           <Input
             type="number"
             placeholder="Enter amount"
             value={depositAmount}
             onChange={(e) => setDepositAmount(e.target.value)}
-            prefix="$"
+            prefix="M"
             step="0.01"
             min="0"
             disabled={transactionLoading}
@@ -283,7 +282,7 @@ export default function CustomerDashboard() {
           />
         </div>
         <div style={{ color: '#999', fontSize: '12px' }}>
-          Current balance: ${accountBalance.toFixed(2)}
+          Current balance: M{accountBalance.toFixed(2)}
         </div>
       </Modal>
 
@@ -298,14 +297,14 @@ export default function CustomerDashboard() {
       >
         <div style={{ marginBottom: '16px' }}>
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-            Amount (USD)
+            Amount (LSL)
           </label>
           <Input
             type="number"
             placeholder="Enter amount"
             value={withdrawAmount}
             onChange={(e) => setWithdrawAmount(e.target.value)}
-            prefix="$"
+            prefix="M"
             step="0.01"
             min="0"
             disabled={transactionLoading}
@@ -313,7 +312,7 @@ export default function CustomerDashboard() {
           />
         </div>
         <div style={{ color: '#999', fontSize: '12px' }}>
-          Available balance: ${accountBalance.toFixed(2)}
+          Available balance: M{accountBalance.toFixed(2)}
         </div>
       </Modal>
 
@@ -328,14 +327,14 @@ export default function CustomerDashboard() {
       >
         <div style={{ marginBottom: '16px' }}>
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-            Amount (USD)
+            Amount (LSL)
           </label>
           <Input
             type="number"
             placeholder="Enter amount"
             value={transferAmount}
             onChange={(e) => setTransferAmount(e.target.value)}
-            prefix="$"
+            prefix="M"
             step="0.01"
             min="0"
             disabled={transactionLoading}
@@ -356,7 +355,7 @@ export default function CustomerDashboard() {
           />
         </div>
         <div style={{ color: '#999', fontSize: '12px' }}>
-          Available balance: ${accountBalance.toFixed(2)}
+          Available balance: M{accountBalance.toFixed(2)}
         </div>
       </Modal>
     </div>

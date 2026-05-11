@@ -12,42 +12,70 @@ const networkController = {
       const nodeIds = new Set();
 
       result.records.forEach(record => {
-        const sName = record.get('senderName');
-        const sId = record.get('senderId');
-        const rName = record.get('receiverName');
-        const rId = record.get('receiverId');
-        const amount = record.get('amount');
-        const risk = record.get('risk');
+        const fraudLink = record.get('fraudLink');
+        const sName = fraudLink.sourceCustomerName;
+        const sId = fraudLink.sourceCustomerId;
+        const rName = fraudLink.targetCustomerName;
+        const rId = fraudLink.targetCustomerId;
+        const amount = fraudLink.transactionAmount;
+        const risk = fraudLink.transactionRiskScore;
+        const sourceDevices = fraudLink.sourceDevices || [];
+        const targetDevices = fraudLink.targetDevices || [];
+        const sourceAccount = fraudLink.sourceAccountId;
+        const targetAccount = fraudLink.targetAccountId;
 
-        // Add Sender Node
+        // Add Sender Node with account and device info
         if (!nodeIds.has(sId)) {
+          const deviceInfo = sourceDevices
+            .filter(d => d.deviceId)
+            .map(d => `${d.deviceType} (${d.os})`)
+            .join(', ') || 'No devices';
+          
           nodes.push({
             id: sId,
-            label: `${sName} (${sId})`, // Actual name from DB
-            type: 'Account',
+            label: `${sName}\n(${sId})\nAccount: ${sourceAccount}\nDevices: ${deviceInfo}`,
+            type: 'Customer',
             riskLevel: risk > 0.7 ? 'High' : risk > 0.4 ? 'Medium' : 'Low',
+            account: sourceAccount,
+            devices: sourceDevices,
           });
           nodeIds.add(sId);
         }
 
-        // Add Receiver Node
+        // Add Receiver Node with account and device info
         if (!nodeIds.has(rId)) {
+          const deviceInfo = targetDevices
+            .filter(d => d.deviceId)
+            .map(d => `${d.deviceType} (${d.os})`)
+            .join(', ') || 'No devices';
+          
           nodes.push({
             id: rId,
-            label: `${rName} (${rId})`, // Actual name from DB
-            type: 'Account',
+            label: `${rName}\n(${rId})\nAccount: ${targetAccount}\nDevices: ${deviceInfo}`,
+            type: 'Customer',
             riskLevel: risk > 0.7 ? 'High' : risk > 0.4 ? 'Medium' : 'Low',
+            account: targetAccount,
+            devices: targetDevices,
           });
           nodeIds.add(rId);
         }
 
-        // Add Edge (The Transaction)
+        // Add Edge (The Transaction) with detailed information
+        const transactionLabel = `$${amount}\n(Risk: ${(risk * 100).toFixed(0)}%)\nAccount: ${sourceAccount}→${targetAccount}`;
         edges.push({
-          id: `${sId}-${rId}-${Date.now()}`,
+          id: `${sId}-${rId}-${fraudLink.transactionId}`,
           source: sId,
           target: rId,
-          label: `$${amount.toFloat()}`,
+          label: transactionLabel,
           riskLevel: risk > 0.7 ? 'High' : risk > 0.4 ? 'Medium' : 'Low',
+          transactionId: fraudLink.transactionId,
+          amount: amount,
+          currency: fraudLink.transactionCurrency,
+          riskScore: risk,
+          isFlagged: fraudLink.transactionFlagged,
+          timestamp: fraudLink.transactionTimestamp,
+          sourceAccount: sourceAccount,
+          targetAccount: targetAccount,
         });
       });
 

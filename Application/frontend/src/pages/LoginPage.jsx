@@ -36,8 +36,7 @@ export default function LoginPage({ onLogin, onRegisterClick }) {
             form={form}
             name="loginForm" 
             layout="vertical" 
-            onFinish={onFinish} 
-            initialValues={{ username: 'testuser', password: 'password123' }}
+            onFinish={onFinish}
           >
             <Form.Item
               label="Email or Username"

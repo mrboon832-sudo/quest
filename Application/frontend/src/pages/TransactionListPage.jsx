@@ -68,7 +68,7 @@ export default function TransactionListPage() {
       title: 'Amount', 
       dataIndex: 'amount', 
       key: 'amount', 
-      render: (val) => `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
+      render: (val) => `M${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
       sorter: (a, b) => a.amount - b.amount,
       width: '12%'
     },

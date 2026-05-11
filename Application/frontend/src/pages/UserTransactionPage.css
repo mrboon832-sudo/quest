@@ -1,0 +1,81 @@
+.user-transaction-page {
+  padding: 24px;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.user-transaction-page .ant-card {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+  border: 1px solid #f0f0f0;
+}
+
+.user-transaction-page .ant-card:hover {
+  box-shadow: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.user-transaction-page .ant-statistic-title {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.user-transaction-page .ant-table {
+  background: #fff;
+  border-radius: 8px;
+}
+
+.user-transaction-page .ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+}
+
+.user-transaction-page .ant-form-item-label > label {
+  font-weight: 500;
+  color: #262626;
+}
+
+.user-transaction-page .ant-btn-primary {
+  background: linear-gradient(90deg, #1677ff 0%, #0958d9 100%);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.user-transaction-page .ant-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.3);
+}
+
+.user-transaction-page .ant-input,
+.user-transaction-page .ant-input-number,
+.user-transaction-page .ant-select {
+  border-radius: 6px;
+}
+
+.user-transaction-page .ant-alert {
+  border-radius: 6px;
+  border: 1px solid #b3d8ff;
+  background: #e6f7ff;
+}
+
+.user-transaction-page .ant-modal-header {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.user-transaction-page .ant-steps {
+  padding: 8px 0;
+}
+
+.user-transaction-page .ant-tag {
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .user-transaction-page {
+    padding: 16px;
+  }
+
+  .user-transaction-page .ant-form {
+    max-width: 100% !important;
+  }
+}

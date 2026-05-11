@@ -6,9 +6,11 @@ const dashboardController = {
   getStats: async (req, res) => {
     const session = driver.session();
     try {
-      // First, get all transactions
+      // First, get all transactions using same approach as transactionController
       const transactionsResult = await session.run(`
-        MATCH (src:Account)-[:SENT_TRANSACTION]->(t:Transaction)<-[:RECEIVED_TRANSACTION]-(dst:Account)
+        MATCH (t:Transaction)
+        OPTIONAL MATCH (src:Account)-[:SENT_TRANSACTION]->(t)
+        OPTIONAL MATCH (dst:Account)-[:RECEIVED_TRANSACTION]->(t)
         RETURN t.transaction_id AS id,
                src.account_id AS fromAccount,
                dst.account_id AS toAccount,
@@ -60,7 +62,7 @@ const dashboardController = {
     try {
       // Fetch all transactions
       const result = await session.run(`
-        MATCH (src:Account)-[:SENT_TRANSACTION]->(t:Transaction)<-[:RECEIVED_TRANSACTION]-(dst:Account)
+        MATCH (t:Transaction)
         RETURN t.risk_score AS riskScore
       `);
 
@@ -102,7 +104,7 @@ const dashboardController = {
     try {
       // Fetch all transactions with timestamps
       const result = await session.run(`
-        MATCH (src:Account)-[:SENT_TRANSACTION]->(t:Transaction)<-[:RECEIVED_TRANSACTION]-(dst:Account)
+        MATCH (t:Transaction)
         RETURN t.timestamp AS timestamp, t.is_flagged AS flagged
       `);
 

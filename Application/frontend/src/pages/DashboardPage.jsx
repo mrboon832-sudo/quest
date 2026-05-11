@@ -91,7 +91,7 @@ export default function DashboardPage() {
       dataIndex: 'amount', 
       key: 'amount', 
       width: '15%',
-      render: (val) => `$${val.toFixed(2)}` 
+      render: (val) => `M${val.toFixed(2)}` 
     },
     {
       title: 'Risk Level',
@@ -143,7 +143,8 @@ export default function DashboardPage() {
             <Statistic 
               title="Total Volume" 
               value={stats.totalVolume} 
-              prefix="$" 
+              prefix="M" 
+              precision={2}
               loading={loading}
             />
           </Card>
